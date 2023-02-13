@@ -138,11 +138,6 @@ KuznShiphr::KuznShiphr(unsigned char* key)
     this->tmp_key_1 = new unsigned char[this->length_key / 2];
     this->tmp_key_2 = new unsigned char[this->length_key / 2];
     this->create_table_Galua();
-    cout << (int)(this->mult(148, 148)^32) << endl;
-    /*for (size_t i = 0; i < 256; i++)
-    {
-        cout << (int)this->table_Galua[i] << "  ";
-    }*/
 }
 
 KuznShiphr::~KuznShiphr()
@@ -182,6 +177,9 @@ unsigned char KuznShiphr::mult(unsigned char a, unsigned char b)
 {
     unsigned char c = 0;
     int ind_a = 0, ind_b = 0;
+    if (a == 0 || b == 0)
+        return 0;
+
     for (size_t i = 0; (i < this->length_table_Galua) && (ind_a == 0 || ind_b == 0); i++)
     {
         if (this->table_Galua[i] == a) 
@@ -190,7 +188,7 @@ unsigned char KuznShiphr::mult(unsigned char a, unsigned char b)
         if (this->table_Galua[i] == b)
             ind_b = i;
     }
-    c = this->table_Galua[(ind_a + ind_b)%255];
+    c = this->table_Galua[(ind_a + ind_b) % 255];
     //unsigned char hi_bit;
     //int i;
     //for (i = 0; i < 8; i++)
