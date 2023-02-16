@@ -1,5 +1,6 @@
 #pragma once
 #include <iostream>
+#include <vector>
 using namespace std;
 
 void print_hex_vec2(unsigned char* c, int n) {
@@ -32,11 +33,11 @@ private:
     void l_transform(unsigned char* c);
     void l_transform_reverse(unsigned char* _vec);
     void xor_vec(unsigned char* key, unsigned char* C);
-    void create_round_key(unsigned char* _in_key, unsigned char* _out_key, int _round);
-    void fill_key();
-    void copy_vec(unsigned char* from, unsigned char* to, int n);
-    void get_keys12(unsigned char* key_1, unsigned char* key_2, unsigned char* from_key);
+    void create_round_key(vector<unsigned char>& _in_key, vector<unsigned char>& _out_key, int _round);
+   
+    void get_keys12(unsigned char* key_1, unsigned char* key_2, vector<unsigned char> from_key);
 
+    void fill_key();
     void create_table_Galua();
 
     const unsigned char Pi[256] = {
@@ -120,35 +121,32 @@ private:
 
     const int length_table_Galua = 256;
 
-    unsigned char* key = nullptr;
+    vector<unsigned char> key;
 
     unsigned char* tmp_key_1 = nullptr;
     unsigned char* tmp_key_2 = nullptr;
 
-    unsigned char** arr_key = nullptr;
+    vector<vector<unsigned char>> arr_key;
 
-    unsigned char* table_Galua = nullptr;
+    vector<unsigned char> table_Galua;
 
 };
 
 KuznShiphr::KuznShiphr(unsigned char* key)
 {
-    this->key = new unsigned char[this->length_key];
-    this->copy_vec(key, this->key, this->length_key);
-    this->tmp_key_1 = new unsigned char[this->length_key / 2];
-    this->tmp_key_2 = new unsigned char[this->length_key / 2];
-    this->create_table_Galua();
+    for (size_t i = 0; i < length_key; i++)
+        this->key.push_back(key[i]);
+    tmp_key_1 = new unsigned char[length_key / 2];
+    tmp_key_2 = new unsigned char[length_key / 2];
+    create_table_Galua();
+    fill_key();
+
 }
 
 KuznShiphr::~KuznShiphr()
 {
-    delete[] this->key;
-
-    delete[] this->tmp_key_1;
-    delete[] this->tmp_key_2;
-    delete[] this->table_Galua;
-    if (this->arr_key != nullptr)
-        deleteMemory(5, this->arr_key);
+    delete[] tmp_key_1;
+    delete[] tmp_key_2;
 }
 
 template<typename _Type>
@@ -180,15 +178,15 @@ unsigned char KuznShiphr::mult(unsigned char a, unsigned char b)
     if (a == 0 || b == 0)
         return 0;
 
-    for (size_t i = 0; (i < this->length_table_Galua) && (ind_a == 0 || ind_b == 0); i++)
+    for (size_t i = 0; (i < length_table_Galua) && (ind_a == 0 || ind_b == 0); i++)
     {
-        if (this->table_Galua[i] == a) 
+        if (table_Galua[i] == a)
             ind_a = i;
 
-        if (this->table_Galua[i] == b)
+        if (table_Galua[i] == b)
             ind_b = i;
     }
-    c = this->table_Galua[(ind_a + ind_b) % 255];
+    c = table_Galua[(ind_a + ind_b) % 255];
     //unsigned char hi_bit;
     //int i;
     //for (i = 0; i < 8; i++)
@@ -206,17 +204,17 @@ unsigned char KuznShiphr::mult(unsigned char a, unsigned char b)
 
 void KuznShiphr::create_round_C(unsigned char* c, int begin) {
     c[0] = begin;
-    this->l_transform(c);
+    l_transform(c);
 }
 
 void KuznShiphr::s_transform(unsigned char* _vec) {
     for (size_t i = 0; i < 16; i++)
-        _vec[i] = this->Pi[_vec[i]];
+        _vec[i] = Pi[_vec[i]];
 }
 
 void KuznShiphr::s_transform_reverse(unsigned char* _vec) {
     for (size_t i = 0; i < 16; i++)
-        _vec[i] = this->reverse_Pi[_vec[i]];
+        _vec[i] = reverse_Pi[_vec[i]];
 }
 
 void KuznShiphr::l_transform(unsigned char* _vec) {
@@ -225,7 +223,7 @@ void KuznShiphr::l_transform(unsigned char* _vec) {
         unsigned char tmp = 0;
         for (size_t j = 0; j < 16; j++)
         {
-            tmp ^= this->mult(_vec[j], l_vec[j]);
+            tmp ^= mult(_vec[j], l_vec[j]);
         }
         for (size_t j = 0; j < 15; j++)
         {
@@ -241,9 +239,9 @@ void KuznShiphr::l_transform_reverse(unsigned char* _vec) {
         unsigned char tmp = 0;
         for (size_t j = 0; j < 16; j++)
         {
-            tmp ^= this->mult(_vec[j], l_vec[15-j]);
+            tmp ^= mult(_vec[j], l_vec[15 - j]);
         }
-        for (int j = 14; j >=0; j--)
+        for (int j = 14; j >= 0; j--)
         {
             _vec[j + 1] = _vec[j];
         }
@@ -257,85 +255,75 @@ void KuznShiphr::xor_vec(unsigned char* key, unsigned char* C) {
         key[i] ^= C[i];
 }
 
-void KuznShiphr::create_round_key(unsigned char* _in_key, unsigned char* _out_key, int _round) {
-    this->copy_vec(_in_key, _out_key, 32);
+void KuznShiphr::create_round_key(vector<unsigned char>& _in_key, vector<unsigned char>& _out_key, int _round) {
+    _out_key = _in_key;
     for (size_t i = 0; i < 8; i++)
     {
         unsigned char round_C[16] = { 0 };
         for (size_t j = 0; j < 16; j++)
         {
-            this->tmp_key_1[j] = _out_key[j];
-            this->tmp_key_2[j] = _out_key[j + 16];
+            tmp_key_1[j] = _out_key[j];
+            tmp_key_2[j] = _out_key[j + 16];
             _out_key[j + 16] = _out_key[j];
         }
-        this->create_round_C(round_C, _round * 8 + i + 1);
-        this->xor_vec(this->tmp_key_1, round_C);
-        this->s_transform(this->tmp_key_1);
-        this->l_transform(this->tmp_key_1);
-        this->xor_vec(this->tmp_key_1, this->tmp_key_2);
+        create_round_C(round_C, _round * 8 + i + 1);
+        xor_vec(tmp_key_1, round_C);
+        s_transform(tmp_key_1);
+        l_transform(tmp_key_1);
+        xor_vec(tmp_key_1, tmp_key_2);
         for (size_t j = 0; j < 16; j++)
-            _out_key[j] = this->tmp_key_1[j];
+            _out_key[j] = tmp_key_1[j];
     }
 }
 
 void KuznShiphr::fill_key() {
-    if(this->arr_key == nullptr)
-        this->CreateMatrix(5, this->length_key, this->arr_key);
+    vector<unsigned char> local_key(key);
 
-    unsigned char* local_key = new unsigned char[this->length_key];
-    this->copy_vec(this->key, local_key, this->length_key);
-    this->copy_vec(local_key, this->arr_key[0], this->length_key);
+    arr_key.push_back(local_key);
     for (size_t i = 0; i < 4; i++)
     {
         create_round_key(local_key, local_key, i);
-        this->copy_vec(local_key, this->arr_key[i+1], this->length_key);
+        arr_key.push_back(local_key);
     }
-    delete[] local_key;
 }
 
-void KuznShiphr::copy_vec(unsigned char* from, unsigned char* to, int n) {
-    for (size_t i = 0; i < n; i++)
-        to[i] = from[i];
-}
-
-void KuznShiphr::get_keys12(unsigned char* key_1, unsigned char* key_2, unsigned char* from_key) {
-    for (size_t i = 0; i < this->length_key/2; i++)
+void KuznShiphr::get_keys12(unsigned char* key_1, unsigned char* key_2, vector<unsigned char> from_key) {
+    for (size_t i = 0; i < length_key / 2; i++)
     {
         key_1[i] = from_key[i];
-        key_2[i] = from_key[i + this->length_key / 2];
+        key_2[i] = from_key[i + length_key / 2];
     }
 }
 
 void KuznShiphr::create_table_Galua() {
-    this->table_Galua = new unsigned char[this->length_table_Galua];
-    this->table_Galua[0]= 1;
+    table_Galua.resize(length_table_Galua);
+    table_Galua[0] = 1;
     int tmp;
-    for (size_t i = 1; i < this->length_table_Galua; i++)
+    for (size_t i = 1; i < length_table_Galua; i++)
     {
-        tmp = this->table_Galua[i - 1] * 2;
+        tmp = table_Galua[i - 1] * 2;
         if (tmp > 255) {
             tmp = tmp ^ 0b111000011 - 256;
         }
-        this->table_Galua[i] = tmp;
+        table_Galua[i] = tmp;
     }
 }
 
 void KuznShiphr::encode(unsigned char* data) {
-    this->fill_key();
 
-    unsigned char* key_1 = new unsigned char[this->length_key / 2];
-    unsigned char* key_2 = new unsigned char[this->length_key / 2];
-    
+    unsigned char* key_1 = new unsigned char[length_key / 2];
+    unsigned char* key_2 = new unsigned char[length_key / 2];
+
     for (size_t round = 0; round < 5; round++)
     {
-        this->get_keys12(key_1, key_2, this->arr_key[round]);
-        this->xor_vec(data, key_1);
-        this->s_transform(data);
-        this->l_transform(data);
-        this->xor_vec(data, key_2);
+        get_keys12(key_1, key_2, arr_key[round]);
+        xor_vec(data, key_1);
+        s_transform(data);
+        l_transform(data);
+        xor_vec(data, key_2);
         if (round != 4) {
-            this->s_transform(data);
-            this->l_transform(data);
+            s_transform(data);
+            l_transform(data);
         }
     }
     delete[] key_1;
@@ -343,21 +331,20 @@ void KuznShiphr::encode(unsigned char* data) {
 }
 
 void KuznShiphr::decode(unsigned char* data) {
-    this->fill_key();
 
-    unsigned char* key_1 = new unsigned char[this->length_key / 2];
-    unsigned char* key_2 = new unsigned char[this->length_key / 2];
+    unsigned char* key_1 = new unsigned char[length_key / 2];
+    unsigned char* key_2 = new unsigned char[length_key / 2];
 
-    for (int round = 4; round >=0; round--)
+    for (int round = 4; round >= 0; round--)
     {
-        this->get_keys12(key_1, key_2, this->arr_key[round]);
-        this->xor_vec(data, key_2);
-        this->l_transform_reverse(data);
-        this->s_transform_reverse(data);
-        this->xor_vec(data, key_1);
+        get_keys12(key_1, key_2, arr_key[round]);
+        xor_vec(data, key_2);
+        l_transform_reverse(data);
+        s_transform_reverse(data);
+        xor_vec(data, key_1);
         if (round != 0) {
-            this->l_transform_reverse(data);
-            this->s_transform_reverse(data);
+            l_transform_reverse(data);
+            s_transform_reverse(data);
         }
     }
     delete[] key_1;
