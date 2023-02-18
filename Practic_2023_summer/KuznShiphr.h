@@ -20,11 +20,6 @@ public:
     void encode(unsigned char* data);
     void decode(unsigned char* data);
 private:
-    template<typename _Type>
-    void CreateMatrix(int _I, int _J, _Type**& _A);
-
-    template<typename _Type>
-    void deleteMemory(int _I, _Type**& _A);
 
     unsigned char mult(unsigned char a, unsigned char b);
     void create_round_C(unsigned char* c, int begin);
@@ -35,7 +30,7 @@ private:
     void xor_vec(unsigned char* key, unsigned char* C);
     void create_round_key(vector<unsigned char>& _in_key, vector<unsigned char>& _out_key, int _round);
    
-    void get_keys12(unsigned char* key_1, unsigned char* key_2, vector<unsigned char> from_key);
+    void get_keys12(vector<unsigned char>& key_1, vector<unsigned char>& key_2, vector<unsigned char> from_key);
 
     void fill_key();
     void create_table_Galua();
@@ -123,8 +118,8 @@ private:
 
     vector<unsigned char> key;
 
-    unsigned char* tmp_key_1 = nullptr;
-    unsigned char* tmp_key_2 = nullptr;
+    vector<unsigned char> tmp_key_1;
+    vector<unsigned char> tmp_key_2;
 
     vector<vector<unsigned char>> arr_key;
 
@@ -136,8 +131,8 @@ KuznShiphr::KuznShiphr(unsigned char* key)
 {
     for (size_t i = 0; i < length_key; i++)
         this->key.push_back(key[i]);
-    tmp_key_1 = new unsigned char[length_key / 2];
-    tmp_key_2 = new unsigned char[length_key / 2];
+    tmp_key_1.resize(length_key / 2);
+    tmp_key_2.resize(length_key / 2);
     create_table_Galua();
     fill_key();
 
@@ -145,30 +140,6 @@ KuznShiphr::KuznShiphr(unsigned char* key)
 
 KuznShiphr::~KuznShiphr()
 {
-    delete[] tmp_key_1;
-    delete[] tmp_key_2;
-}
-
-template<typename _Type>
-void KuznShiphr::CreateMatrix(int _I, int _J, _Type**& _A)
-{
-    int i1, i2;
-    _A = new _Type * [_I];
-    for (i1 = 0; i1 < _I; i1++) {
-        _A[i1] = new _Type[_J];
-        for (i2 = 0; i2 < _J; i2++) {
-            _A[i1][i2] = 0.0;
-        }
-    }
-}
-
-template<typename _Type>
-void KuznShiphr::deleteMemory(int _I, _Type**& _A) {
-    int i1;
-    for (i1 = 0; i1 < _I; i1++) {
-        delete _A[i1];
-    }
-    delete[]_A;
 }
 
 unsigned char KuznShiphr::mult(unsigned char a, unsigned char b)
@@ -259,18 +230,18 @@ void KuznShiphr::create_round_key(vector<unsigned char>& _in_key, vector<unsigne
     _out_key = _in_key;
     for (size_t i = 0; i < 8; i++)
     {
-        unsigned char round_C[16] = { 0 };
+        vector<unsigned char> round_C(16);
         for (size_t j = 0; j < 16; j++)
         {
             tmp_key_1[j] = _out_key[j];
             tmp_key_2[j] = _out_key[j + 16];
             _out_key[j + 16] = _out_key[j];
         }
-        create_round_C(round_C, _round * 8 + i + 1);
-        xor_vec(tmp_key_1, round_C);
-        s_transform(tmp_key_1);
-        l_transform(tmp_key_1);
-        xor_vec(tmp_key_1, tmp_key_2);
+        create_round_C(round_C.data(), _round * 8 + i + 1);
+        xor_vec(tmp_key_1.data(), round_C.data());
+        s_transform(tmp_key_1.data());
+        l_transform(tmp_key_1.data());
+        xor_vec(tmp_key_1.data(), tmp_key_2.data());
         for (size_t j = 0; j < 16; j++)
             _out_key[j] = tmp_key_1[j];
     }
@@ -287,7 +258,7 @@ void KuznShiphr::fill_key() {
     }
 }
 
-void KuznShiphr::get_keys12(unsigned char* key_1, unsigned char* key_2, vector<unsigned char> from_key) {
+void KuznShiphr::get_keys12(vector<unsigned char>& key_1, vector<unsigned char>& key_2, vector<unsigned char> from_key) {
     for (size_t i = 0; i < length_key / 2; i++)
     {
         key_1[i] = from_key[i];
@@ -311,42 +282,38 @@ void KuznShiphr::create_table_Galua() {
 
 void KuznShiphr::encode(unsigned char* data) {
 
-    unsigned char* key_1 = new unsigned char[length_key / 2];
-    unsigned char* key_2 = new unsigned char[length_key / 2];
+    vector<unsigned char> key_1(length_key / 2);
+    vector<unsigned char> key_2(length_key / 2);
 
     for (size_t round = 0; round < 5; round++)
     {
         get_keys12(key_1, key_2, arr_key[round]);
-        xor_vec(data, key_1);
+        xor_vec(data, key_1.data());
         s_transform(data);
         l_transform(data);
-        xor_vec(data, key_2);
+        xor_vec(data, key_2.data());
         if (round != 4) {
             s_transform(data);
             l_transform(data);
         }
     }
-    delete[] key_1;
-    delete[] key_2;
 }
 
 void KuznShiphr::decode(unsigned char* data) {
 
-    unsigned char* key_1 = new unsigned char[length_key / 2];
-    unsigned char* key_2 = new unsigned char[length_key / 2];
+    vector<unsigned char> key_1(length_key / 2);
+    vector<unsigned char> key_2(length_key / 2);
 
     for (int round = 4; round >= 0; round--)
     {
         get_keys12(key_1, key_2, arr_key[round]);
-        xor_vec(data, key_2);
+        xor_vec(data, key_2.data());
         l_transform_reverse(data);
         s_transform_reverse(data);
-        xor_vec(data, key_1);
+        xor_vec(data, key_1.data());
         if (round != 0) {
             l_transform_reverse(data);
             s_transform_reverse(data);
         }
     }
-    delete[] key_1;
-    delete[] key_2;
 }
