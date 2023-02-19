@@ -1,36 +1,31 @@
 #pragma once
-#include <iostream>
 #include <vector>
-using namespace std;
-
-void print_hex_vec2(unsigned char* c, int n) {
-    for (size_t j = 0; j < n; j++)
-    {
-        printf(" %x ", c[j]);
-    }
-    cout << endl;
-}
+using std::vector;
 
 class KuznShiphr
 {
 public:
-    KuznShiphr(unsigned char* key);
+    KuznShiphr(unsigned char* _key);
     ~KuznShiphr();
 
-    void encode(unsigned char* data);
-    void decode(unsigned char* data);
+    void encode(unsigned char* _data);
+    void decode(unsigned char* _data);
 private:
 
-    unsigned char mult(unsigned char a, unsigned char b);
-    void create_round_C(unsigned char* c, int begin);
-    void s_transform(unsigned char* c);
+    unsigned char mult(unsigned char _a, unsigned char _b);
+    void create_round_C(unsigned char* _c, int _begin);
+    void s_transform(unsigned char* _vec);
     void s_transform_reverse(unsigned char* _vec);
-    void l_transform(unsigned char* c);
+    void l_transform(unsigned char* _vec);
     void l_transform_reverse(unsigned char* _vec);
-    void xor_vec(unsigned char* key, unsigned char* C);
-    void create_round_key(vector<unsigned char>& _in_key, vector<unsigned char>& _out_key, int _round);
+    void xor_vec(unsigned char* _modable_vec, unsigned char* _vec);
+    void create_round_key(vector<unsigned char>& _in_key,
+        vector<unsigned char>& _out_key,
+        int _round);
    
-    void get_keys12(vector<unsigned char>& key_1, vector<unsigned char>& key_2, vector<unsigned char> from_key);
+    void split_key(vector<unsigned char>& _key_1,
+        vector<unsigned char>& _key_2,
+        vector<unsigned char> _from_key);
 
     void fill_key();
     void create_table_Galua();
@@ -127,55 +122,42 @@ private:
 
 };
 
-KuznShiphr::KuznShiphr(unsigned char* key)
+KuznShiphr::KuznShiphr(unsigned char* _key)
 {
     for (size_t i = 0; i < length_key; i++)
-        this->key.push_back(key[i]);
+        key.push_back(_key[i]);
     tmp_key_1.resize(length_key / 2);
     tmp_key_2.resize(length_key / 2);
     create_table_Galua();
     fill_key();
-
 }
 
 KuznShiphr::~KuznShiphr()
 {
 }
 
-unsigned char KuznShiphr::mult(unsigned char a, unsigned char b)
+unsigned char KuznShiphr::mult(unsigned char _a, unsigned char _b)
 {
     unsigned char c = 0;
     int ind_a = 0, ind_b = 0;
-    if (a == 0 || b == 0)
+    if (_a == 0 || _b == 0)
         return 0;
 
     for (size_t i = 0; (i < length_table_Galua) && (ind_a == 0 || ind_b == 0); i++)
     {
-        if (table_Galua[i] == a)
+        if (table_Galua[i] == _a)
             ind_a = i;
 
-        if (table_Galua[i] == b)
+        if (table_Galua[i] == _b)
             ind_b = i;
     }
     c = table_Galua[(ind_a + ind_b) % 255];
-    //unsigned char hi_bit;
-    //int i;
-    //for (i = 0; i < 8; i++)
-    //{
-    //    if (b & 1)
-    //        c ^= a;
-    //    hi_bit = a & 0x80;
-    //    a <<= 1;
-    //    if (hi_bit)
-    //        a ^= 0xc3; // Полином x^8 + x^7 + x^6 + x + 1
-    //    b >>= 1;
-    //}
     return c;
 }
 
-void KuznShiphr::create_round_C(unsigned char* c, int begin) {
-    c[0] = begin;
-    l_transform(c);
+void KuznShiphr::create_round_C(unsigned char* _c, int _begin) {
+    _c[0] = _begin;
+    l_transform(_c);
 }
 
 void KuznShiphr::s_transform(unsigned char* _vec) {
@@ -221,12 +203,14 @@ void KuznShiphr::l_transform_reverse(unsigned char* _vec) {
     }
 }
 
-void KuznShiphr::xor_vec(unsigned char* key, unsigned char* C) {
+void KuznShiphr::xor_vec(unsigned char* _modable_vec, unsigned char* _vec) {
     for (size_t i = 0; i < 16; i++)
-        key[i] ^= C[i];
+        _modable_vec[i] ^= _vec[i];
 }
 
-void KuznShiphr::create_round_key(vector<unsigned char>& _in_key, vector<unsigned char>& _out_key, int _round) {
+void KuznShiphr::create_round_key(vector<unsigned char>& _in_key,
+    vector<unsigned char>& _out_key,
+    int _round) {
     _out_key = _in_key;
     for (size_t i = 0; i < 8; i++)
     {
@@ -258,11 +242,13 @@ void KuznShiphr::fill_key() {
     }
 }
 
-void KuznShiphr::get_keys12(vector<unsigned char>& key_1, vector<unsigned char>& key_2, vector<unsigned char> from_key) {
+void KuznShiphr::split_key(vector<unsigned char>& _key_1,
+    vector<unsigned char>& _key_2,
+    vector<unsigned char> _from_key) {
     for (size_t i = 0; i < length_key / 2; i++)
     {
-        key_1[i] = from_key[i];
-        key_2[i] = from_key[i + length_key / 2];
+        _key_1[i] = _from_key[i];
+        _key_2[i] = _from_key[i + length_key / 2];
     }
 }
 
@@ -280,40 +266,40 @@ void KuznShiphr::create_table_Galua() {
     }
 }
 
-void KuznShiphr::encode(unsigned char* data) {
+void KuznShiphr::encode(unsigned char* _data) {
 
     vector<unsigned char> key_1(length_key / 2);
     vector<unsigned char> key_2(length_key / 2);
 
     for (size_t round = 0; round < 5; round++)
     {
-        get_keys12(key_1, key_2, arr_key[round]);
-        xor_vec(data, key_1.data());
-        s_transform(data);
-        l_transform(data);
-        xor_vec(data, key_2.data());
+        split_key(key_1, key_2, arr_key[round]);
+        xor_vec(_data, key_1.data());
+        s_transform(_data);
+        l_transform(_data);
+        xor_vec(_data, key_2.data());
         if (round != 4) {
-            s_transform(data);
-            l_transform(data);
+            s_transform(_data);
+            l_transform(_data);
         }
     }
 }
 
-void KuznShiphr::decode(unsigned char* data) {
+void KuznShiphr::decode(unsigned char* _data) {
 
     vector<unsigned char> key_1(length_key / 2);
     vector<unsigned char> key_2(length_key / 2);
 
     for (int round = 4; round >= 0; round--)
     {
-        get_keys12(key_1, key_2, arr_key[round]);
-        xor_vec(data, key_2.data());
-        l_transform_reverse(data);
-        s_transform_reverse(data);
-        xor_vec(data, key_1.data());
+        split_key(key_1, key_2, arr_key[round]);
+        xor_vec(_data, key_2.data());
+        l_transform_reverse(_data);
+        s_transform_reverse(_data);
+        xor_vec(_data, key_1.data());
         if (round != 0) {
-            l_transform_reverse(data);
-            s_transform_reverse(data);
+            l_transform_reverse(_data);
+            s_transform_reverse(_data);
         }
     }
 }
