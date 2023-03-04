@@ -2,6 +2,7 @@
 
 KuznShiphr::KuznShiphr(unsigned char* _key)
 {
+    key.reserve(length_key);
     for (size_t i = 0; i < length_key; i++)
         key.push_back(_key[i]);
     tmp_key_1.resize(length_key / 2);
