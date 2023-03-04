@@ -18,6 +18,9 @@
     <ClCompile Include="Practic_2023_summer.cpp">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
+    <ClCompile Include="KuznShiphr.cpp">
+      <Filter>Исходные файлы</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="KuznShiphr.h">

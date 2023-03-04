@@ -140,6 +140,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Practic_2023_summer.cpp" />
+    <ClCompile Include="KuznShiphr.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="KuznShiphr.h" />
